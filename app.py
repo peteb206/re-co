@@ -1,10 +1,13 @@
 import os
 import json
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify
+from flask_cors import CORS, cross_origin
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
 app = Flask(__name__)
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Google Sheet
 if os.path.isfile('.env'):
@@ -46,14 +49,12 @@ class Product:
 
 # Routes
 @app.route('/shop', methods = ['GET'])
+@cross_origin()
 def shop():
     category = request.args.get('category', default = '')
     products = [Product(product_dict) for product_dict in google_sheet.worksheet('Products').get_all_records()]
     filtered_products = [product for product in products if product.category == category] if category != '' else products
-    r = make_response(jsonify([product.to_json() for product in filtered_products]))
-    r.headers.set('Access-Control-Allow-Origin', '*')
-    r.headers.set('Access-Control-Allow-Credentials', 'true')
-    return r
+    return jsonify([product.to_json() for product in filtered_products])
  
 if __name__ == '__main__':
     app.run(debug = True)
