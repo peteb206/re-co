@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify, make_response
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
@@ -47,7 +47,13 @@ class Product:
 # Routes
 @app.route('/shop', methods = ['GET'])
 def shop():
-    return jsonify([Product(product_dict).to_json() for product_dict in google_sheet.worksheet('Products').get_all_records()])
+    category = request.args.get('category', default = '')
+    products = [Product(product_dict) for product_dict in google_sheet.worksheet('Products').get_all_records()]
+    filtered_products = [product for product in products if product.category == category] if category != '' else products
+    r = make_response(jsonify([product.to_json() for product in filtered_products]))
+    r.headers.set('Access-Control-Allow-Origin', '*')
+    r.headers.set('Access-Control-Allow-Credentials', 'true')
+    return r
  
 if __name__ == '__main__':
     app.run(debug = True)
