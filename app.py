@@ -36,16 +36,18 @@ class Product:
         self.image_url: str = google_sheet_record['imageUrl']
         self.details: str = google_sheet_record['details']
 
-    def to_json(self):
-        return {
+    def to_json(self, details = False):
+        product_json = {
             'id': self.id,
             'vendor': self.vendor,
             'name': self.name,
             'category': self.category,
             'price': self.price,
-            'imageUrl': self.image_url,
-            'details': self.details
+            'imageUrl': self.image_url
         }
+        if details:
+            product_json['details'] = self.details
+        return product_json
 
 # Routes
 @app.route('/shop', methods = ['GET'])
@@ -55,6 +57,16 @@ def shop():
     products = [Product(product_dict) for product_dict in google_sheet.worksheet('Products').get_all_records()]
     filtered_products = [product for product in products if product.category == category] if category != '' else products
     return jsonify([product.to_json() for product in filtered_products])
+
+@app.route('/product/<product_id>', methods = ['GET'])
+@cross_origin()
+def product(product_id):
+    products = [Product(product_dict) for product_dict in google_sheet.worksheet('Products').get_all_records()]
+    products_from_id = [product for product in products if str(product.id) == str(product_id)]
+    if len(products_from_id) == 0:
+        # Not found
+        return jsonify({})
+    return jsonify(products_from_id[0].to_json(details = True))
  
 if __name__ == '__main__':
-    app.run(debug = True)
+    app.run(debug = False)
