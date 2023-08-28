@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify
 from flask_cors import CORS, cross_origin
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
@@ -32,6 +32,8 @@ class Product:
         self.vendor: str = google_sheet_record['vendor']
         self.name: str = google_sheet_record['name']
         self.category: str = google_sheet_record['category']
+        self.gender: str = google_sheet_record['gender']
+        self.sub_category: str = google_sheet_record['subCategory']
         self.price: float = float(str(google_sheet_record['price']).replace('$', ''))
         self.image_url: str = google_sheet_record['imageUrl']
         self.details: str = google_sheet_record['details']
@@ -42,6 +44,8 @@ class Product:
             'vendor': self.vendor,
             'name': self.name,
             'category': self.category,
+            'gender': self.gender,
+            'subCategory': self.sub_category,
             'price': self.price,
             'imageUrl': self.image_url
         }
@@ -53,9 +57,28 @@ class Product:
 @app.route('/shop', methods = ['GET'])
 @cross_origin()
 def shop():
-    category = request.args.get('category', default = '')
+    return jsonify([product.to_json() for product in [Product(prod_dict) for prod_dict in google_sheet.worksheet('Products').get_all_records()]])
+
+@app.route('/shop/<category>', methods = ['GET'])
+@cross_origin()
+def shop_category(category):
     products = [Product(product_dict) for product_dict in google_sheet.worksheet('Products').get_all_records()]
-    filtered_products = [product for product in products if product.category == category] if category != '' else products
+    filtered_products = [product for product in products if product.category == category]
+    return jsonify([product.to_json() for product in filtered_products])
+
+@app.route('/shop/<category>/<gender>', methods = ['GET'])
+@cross_origin()
+def shop_category_gender(category, gender):
+    products = [Product(product_dict) for product_dict in google_sheet.worksheet('Products').get_all_records()]
+    filtered_products = [product for product in products if (product.category == category) & (product.gender == gender)]
+    return jsonify([product.to_json() for product in filtered_products])
+
+@app.route('/shop/<category>/<gender>/<sub_category>', methods = ['GET'])
+@cross_origin()
+def shop_category_gender_subcategory(category, gender, sub_category):
+    products = [Product(product_dict) for product_dict in google_sheet.worksheet('Products').get_all_records()]
+    filtered_products = [product for product in products if (product.category == category) & (product.gender == gender) & \
+                         (product.sub_category == sub_category)]
     return jsonify([product.to_json() for product in filtered_products])
 
 @app.route('/product/<product_id>', methods = ['GET'])
